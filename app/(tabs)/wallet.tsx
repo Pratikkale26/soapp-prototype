@@ -4,7 +4,9 @@ import {
   View, 
   ScrollView, 
   TouchableOpacity, 
-  TextInput 
+  TextInput,
+  Alert,
+  Dimensions
 } from 'react-native';
 import { theme } from '@/constants/theme';
 import { useAppContext } from '@/context/AppContext';
@@ -12,12 +14,17 @@ import Header from '@/components/Header';
 import Card from '@/components/Card';
 import Typography from '@/components/Typography';
 import Button from '@/components/Button';
-import { CreditCard, Wallet, CirclePlus as PlusCircle, ChevronRight, RefreshCw } from 'lucide-react-native';
+import { CreditCard, Wallet, CirclePlus as PlusCircle, ChevronRight, RefreshCw, ArrowUpRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const { width } = Dimensions.get('window');
+const CARD_PADDING = 12;
+const HORIZONTAL_PADDING = 16;
+
 export default function WalletScreen() {
-  const { walletBalance } = useAppContext();
+  const { walletBalance, updateWalletBalance } = useAppContext();
   const [amount, setAmount] = useState('');
+  const [upiId, setUpiId] = useState('');
 
   const handleAmountChange = (text: string) => {
     // Allow only numbers and one decimal point
@@ -27,26 +34,54 @@ export default function WalletScreen() {
     }
   };
 
+  const handleTopUp = () => {
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid amount to top up');
+      return;
+    }
+
+    if (!upiId) {
+      Alert.alert('Missing UPI ID', 'Please enter your UPI ID');
+      return;
+    }
+
+    updateWalletBalance(parseFloat(amount));
+    setAmount('');
+    setUpiId('');
+    Alert.alert('Success', 'Amount added to wallet successfully');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Wallet" showBackButton={false} />
       
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Card style={styles.balanceCard}>
-          <Typography variant="body2" color={theme.colors.neutral[600]}>
-            Current Balance:
-          </Typography>
-          <Typography variant="h3" color={theme.colors.primary[700]} style={styles.balanceText}>
-            ${walletBalance.toFixed(2)}
-          </Typography>
+          <View style={styles.balanceHeader}>
+            <View>
+              <Typography variant="body2" color={theme.colors.neutral[600]}>
+                Available Balance
+              </Typography>
+              <Typography variant="h3" color={theme.colors.primary[700]} style={styles.balanceText}>
+                ${walletBalance.toFixed(2)}
+              </Typography>
+            </View>
+            <View style={[styles.balanceIcon, { backgroundColor: theme.colors.primary[50] }]}>
+              <Wallet size={24} color={theme.colors.primary[500]} />
+            </View>
+          </View>
           
           <View style={styles.cardNumberContainer}>
-            <Typography variant="body1" color={theme.colors.neutral[600]}>
-              PIN: *****
+            <Typography variant="body2" color={theme.colors.neutral[600]}>
+              Card: **** **** **** 1234
             </Typography>
             <View style={styles.divider} />
-            <Typography variant="body1" color={theme.colors.neutral[600]}>
-              Reference: 54AB6
+            <Typography variant="body2" color={theme.colors.neutral[600]}>
+              Exp: 12/25
             </Typography>
           </View>
         </Card>
@@ -56,7 +91,7 @@ export default function WalletScreen() {
             <View style={[styles.actionIcon, { backgroundColor: theme.colors.primary[50] }]}>
               <PlusCircle size={24} color={theme.colors.primary[500]} />
             </View>
-            <Typography variant="body2">Add Bank</Typography>
+            <Typography variant="body2">Add Money</Typography>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton}>
@@ -76,7 +111,7 @@ export default function WalletScreen() {
         
         <Card style={styles.topupCard}>
           <Typography variant="h5" style={styles.topupTitle}>
-            Add Amount
+            Add Money
           </Typography>
           
           <View style={styles.amountInputContainer}>
@@ -89,6 +124,7 @@ export default function WalletScreen() {
               keyboardType="numeric"
               value={amount}
               onChangeText={handleAmountChange}
+              placeholderTextColor={theme.colors.neutral[400]}
             />
           </View>
           
@@ -101,28 +137,31 @@ export default function WalletScreen() {
               style={styles.upiInput}
               placeholder="Enter your UPI ID"
               autoCapitalize="none"
+              value={upiId}
+              onChangeText={setUpiId}
+              placeholderTextColor={theme.colors.neutral[400]}
             />
           </View>
           
           <Button
-            title="+ Add bank account details"
-            variant="text"
-            style={styles.addBankButton}
-            textStyle={{ color: theme.colors.primary[500] }}
-          />
-          
-          <Button
-            title="Proceed"
+            title="Proceed to Add Money"
             variant="primary"
             fullWidth
             style={styles.proceedButton}
+            onPress={handleTopUp}
           />
         </Card>
         
         <Card style={styles.recentTransactionsCard}>
-          <Typography variant="h5" style={styles.sectionTitle}>
-            Recent Transactions
-          </Typography>
+          <View style={styles.sectionHeader}>
+            <Typography variant="h5">Recent Transactions</Typography>
+            <TouchableOpacity style={styles.viewAllButton}>
+              <Typography variant="button" color={theme.colors.primary[500]}>
+                View All
+              </Typography>
+              <ChevronRight size={16} color={theme.colors.primary[500]} />
+            </TouchableOpacity>
+          </View>
           
           {[1, 2, 3].map((item) => (
             <View key={item} style={styles.transactionItem}>
@@ -132,14 +171,14 @@ export default function WalletScreen() {
                   { backgroundColor: item % 2 === 0 ? theme.colors.success[50] : theme.colors.error[50] }
                 ]}>
                   {item % 2 === 0 ? (
-                    <PlusCircle size={20} color={theme.colors.success[500]} />
+                    <ArrowUpRight size={20} color={theme.colors.success[500]} />
                   ) : (
                     <CreditCard size={20} color={theme.colors.error[500]} />
                   )}
                 </View>
                 <View>
                   <Typography variant="subtitle2">
-                    {item % 2 === 0 ? 'Top Up' : 'Payment'}
+                    {item % 2 === 0 ? 'Money Added' : 'Payment'}
                   </Typography>
                   <Typography variant="caption" color={theme.colors.neutral[500]}>
                     May {10 + item}, 2023
@@ -154,13 +193,6 @@ export default function WalletScreen() {
               </Typography>
             </View>
           ))}
-          
-          <TouchableOpacity style={styles.viewAllButton}>
-            <Typography variant="button" color={theme.colors.primary[500]}>
-              View All
-            </Typography>
-            <ChevronRight size={16} color={theme.colors.primary[500]} />
-          </TouchableOpacity>
         </Card>
       </ScrollView>
     </SafeAreaView>
@@ -175,13 +207,31 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: theme.spacing[6],
+    paddingHorizontal: HORIZONTAL_PADDING,
+  },
   balanceCard: {
-    margin: theme.spacing[3],
+    marginVertical: theme.spacing[3],
+    padding: theme.spacing[3],
     backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.sm,
+  },
+  balanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  balanceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   balanceText: {
-    marginVertical: theme.spacing[2],
+    marginTop: theme.spacing[1],
   },
   cardNumberContainer: {
     flexDirection: 'row',
@@ -196,12 +246,13 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginHorizontal: theme.spacing[3],
+    justifyContent: 'space-between',
     marginBottom: theme.spacing[3],
+    gap: theme.spacing[2],
   },
   actionButton: {
     alignItems: 'center',
+    flex: 1,
   },
   actionIcon: {
     width: 56,
@@ -210,12 +261,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing[1],
+    ...theme.shadows.sm,
   },
   topupCard: {
-    margin: theme.spacing[3],
-    marginTop: 0,
+    marginVertical: theme.spacing[3],
+    padding: theme.spacing[3],
     backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.sm,
   },
   topupTitle: {
     marginBottom: theme.spacing[2],
@@ -236,6 +289,7 @@ const styles = StyleSheet.create({
     height: 48,
     fontFamily: theme.typography.fontFamily.medium,
     fontSize: theme.typography.fontSize['2xl'],
+    color: theme.colors.neutral[900],
   },
   upiLabel: {
     marginBottom: theme.spacing[1],
@@ -250,22 +304,22 @@ const styles = StyleSheet.create({
     height: 48,
     fontFamily: theme.typography.fontFamily.regular,
     fontSize: theme.typography.fontSize.md,
-  },
-  addBankButton: {
-    alignSelf: 'flex-start',
-    marginBottom: theme.spacing[3],
+    color: theme.colors.neutral[900],
   },
   proceedButton: {
     marginTop: theme.spacing[2],
   },
   recentTransactionsCard: {
-    margin: theme.spacing[3],
-    marginTop: 0,
+    marginVertical: theme.spacing[3],
+    padding: theme.spacing[3],
     backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.lg,
-    marginBottom: theme.spacing[6],
+    ...theme.shadows.sm,
   },
-  sectionTitle: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: theme.spacing[2],
   },
   transactionItem: {
@@ -291,7 +345,5 @@ const styles = StyleSheet.create({
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: theme.spacing[3],
   },
 });

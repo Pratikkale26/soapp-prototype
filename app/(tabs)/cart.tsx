@@ -6,11 +6,46 @@ import Header from '@/components/Header';
 import Typography from '@/components/Typography';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
-import { Minus, Plus, Trash2 } from 'lucide-react-native';
+import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 export default function CartScreen() {
-  const { cart, updateCartQuantity, removeFromCart, cartTotal } = useAppContext();
+  const router = useRouter();
+  const { cart, updateCartQuantity, removeFromCart, cartTotal, selectedStore, addToOrderHistory, clearCart } = useAppContext();
+
+  const handleCheckout = () => {
+    if (!selectedStore) {
+      // Show error or navigate to store selection
+      return;
+    }
+
+    const order = {
+      id: `ORD-${Date.now()}`,
+      date: new Date().toLocaleDateString(),
+      total: cartTotal * 1.08,
+      items: cart.map(item => ({
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price
+      })),
+      store: selectedStore.name
+    };
+
+    addToOrderHistory(order);
+    clearCart();
+
+    router.push({
+      pathname: '/receipt',
+      params: {
+        orderId: order.id,
+        total: order.total,
+        items: JSON.stringify(order.items),
+        store: order.store,
+        date: order.date
+      }
+    });
+  };
 
   const renderItem = ({ item }: { item: any }) => (
     <Card style={styles.itemCard}>
@@ -64,7 +99,8 @@ export default function CartScreen() {
 
   const emptyCart = () => (
     <View style={styles.emptyContainer}>
-      <Typography variant="h5" color={theme.colors.neutral[500]} align="center">
+      <ShoppingBag size={64} color={theme.colors.neutral[400]} />
+      <Typography variant="h5" color={theme.colors.neutral[500]} align="center" style={styles.emptyTitle}>
         Your cart is empty
       </Typography>
       <Typography
@@ -75,6 +111,12 @@ export default function CartScreen() {
       >
         Add items to your cart from the store
       </Typography>
+      <Button
+        title="Browse Store"
+        variant="primary"
+        style={styles.browseButton}
+        onPress={() => router.push('/store-view')}
+      />
     </View>
   );
 
@@ -84,6 +126,11 @@ export default function CartScreen() {
       
       <View style={styles.titleContainer}>
         <Typography variant="h5">Ready for Checkout</Typography>
+        {selectedStore && (
+          <Typography variant="body2" color={theme.colors.neutral[600]}>
+            {selectedStore.name}
+          </Typography>
+        )}
       </View>
       
       <FlatList
@@ -102,7 +149,7 @@ export default function CartScreen() {
           </View>
           
           <View style={styles.summaryRow}>
-            <Typography variant="body1">Tax:</Typography>
+            <Typography variant="body1">Tax (8%):</Typography>
             <Typography variant="subtitle2">
               ${(cartTotal * 0.08).toFixed(2)}
             </Typography>
@@ -118,17 +165,19 @@ export default function CartScreen() {
           </View>
           
           <Button
-            title="Continue to Checkout"
+            title="Proceed to Checkout"
             variant="primary"
             fullWidth
             style={styles.checkoutButton}
+            onPress={handleCheckout}
           />
           
           <Button
-            title="Add more items"
+            title="Continue Shopping"
             variant="outline"
             fullWidth
             style={styles.continueButton}
+            onPress={() => router.push('/store-view')}
           />
         </View>
       )}
@@ -146,7 +195,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: theme.spacing[3],
-    paddingBottom: theme.spacing[20], // To ensure the last item is visible above the summary
+    paddingBottom: theme.spacing[20],
     flexGrow: 1,
   },
   itemCard: {
@@ -196,10 +245,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing[4],
   },
+  emptyTitle: {
+    marginTop: theme.spacing[2],
+  },
   emptyText: {
     marginTop: theme.spacing[1],
     maxWidth: 250,
     textAlign: 'center',
+  },
+  browseButton: {
+    marginTop: theme.spacing[4],
   },
   summaryContainer: {
     position: 'absolute',

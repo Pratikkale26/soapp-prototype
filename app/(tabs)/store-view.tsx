@@ -310,4 +310,4 @@ const styles = StyleSheet.create({
   productInfo: {
     padding: theme.spacing[2],
   },
-});
+}); 

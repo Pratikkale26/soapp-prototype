@@ -5,11 +5,26 @@ import { useAppContext } from '@/context/AppContext';
 import Header from '@/components/Header';
 import Card from '@/components/Card';
 import Typography from '@/components/Typography';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Receipt } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 export default function OrderHistoryScreen() {
   const { orderHistory } = useAppContext();
+  const router = useRouter();
+
+  const handleViewReceipt = (order: any) => {
+    router.push({
+      pathname: '/receipt',
+      params: {
+        orderId: order.id,
+        total: order.total,
+        items: JSON.stringify(order.items),
+        store: order.store,
+        date: order.date
+      }
+    });
+  };
 
   const renderItem = ({ item }: { item: any }) => (
     <Card style={styles.orderCard}>
@@ -44,10 +59,16 @@ export default function OrderHistoryScreen() {
         ))}
       </View>
       
-      <TouchableOpacity style={styles.viewDetailsButton}>
-        <Typography variant="button" color={theme.colors.primary[500]}>
-          View Details
-        </Typography>
+      <TouchableOpacity 
+        style={styles.viewReceiptButton}
+        onPress={() => handleViewReceipt(item)}
+      >
+        <View style={styles.viewReceiptContent}>
+          <Receipt size={16} color={theme.colors.primary[500]} />
+          <Typography variant="button" color={theme.colors.primary[500]}>
+            View Receipt
+          </Typography>
+        </View>
         <ChevronRight size={16} color={theme.colors.primary[500]} />
       </TouchableOpacity>
     </Card>
@@ -100,15 +121,15 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing[2],
   },
   subtitle: {
-    marginTop: theme.spacing[0.5],
+    marginTop: theme.spacing[1],
   },
   listContent: {
-    flexGrow: 1,
-    paddingBottom: theme.spacing[4],
+    padding: theme.spacing[3],
+    paddingTop: 0,
   },
   orderCard: {
-    marginHorizontal: theme.spacing[3],
     marginBottom: theme.spacing[3],
+    padding: theme.spacing[3],
   },
   orderHeader: {
     flexDirection: 'row',
@@ -120,30 +141,31 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing[2],
   },
   itemsList: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-    paddingTop: theme.spacing[2],
+    marginBottom: theme.spacing[2],
   },
   orderItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: theme.spacing[1],
   },
-  viewDetailsButton: {
+  viewReceiptButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: theme.spacing[2],
+    justifyContent: 'space-between',
     paddingTop: theme.spacing[2],
     borderTopWidth: 1,
     borderTopColor: theme.colors.neutral[200],
+  },
+  viewReceiptContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing[1],
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing[4],
-    marginTop: theme.spacing[8],
   },
   emptyText: {
     marginTop: theme.spacing[1],
